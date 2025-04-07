@@ -1,42 +1,33 @@
-import asyncio
-from typing import AsyncGenerator
+import httpx
+from fastapi import HTTPException
+from pydantic import BaseModel
+
 from app.config import settings
 
 
-class LlamaService:
-    def __init__(self):
-        self.process = None
-        self.system_prompt = settings.llama.system_prompt
+class CompletionRequest(BaseModel):
+    prompt: str
+    temperature: float = 0.7
+    max_tokens: int = 200
 
-    async def start(self):
-        self.process = await asyncio.create_subprocess_exec(
-            settings.llama.main,
-            "-m", settings.llama.model_path,
-            "--ctx-size", "2048",
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-
-    async def generate(self, prompt: str) -> str:
-        full_prompt = f"{self.system_prompt}\n\nUser: {prompt}\nAssistant:"
-
-        self.process.stdin.write(f"{full_prompt}\n".encode())
-        await self.process.stdin.drain()
-
-        output = await self.process.stdout.readline()
-        return output.decode().strip()
-
-    async def close(self):
-        if self.process:
-            self.process.terminate()
-            await self.process.wait()
-
-
-async def get_llama_service() -> AsyncGenerator[LlamaService, None]:
-    service = LlamaService()
-    await service.start()
+async def generate_text(text: str):
     try:
-        yield service
-    finally:
-        await service.close()
+        request = CompletionRequest(prompt=text)
+        full_prompt = f"{settings.llama.system_prompt}\n\nUser: {request.prompt}\nAssistant:"
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{settings.llama.llama_url}/completion",
+                json={
+                    "prompt": full_prompt,
+                    "temperature": request.temperature,
+                    "n_predict": request.max_tokens
+                },
+                timeout=30.0
+            )
+            response.raise_for_status()
+            return response.json()
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка подключения к Llama: {str(e)}")
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Произошла ошибка")

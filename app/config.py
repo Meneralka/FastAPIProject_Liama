@@ -1,9 +1,9 @@
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings
 
-def LiamaSettings(BaseModel):
-    model_path: str = "~/llama.cpp/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf"
-    main: str = '~/llama.cpp/build/bin/llama-cli'
+
+class LiamaSettings(BaseModel):
+    llama_url : str = 'http://localhost:8080'
     system_prompt: str = """
 Ты — безопасный AI-ассистент. Соблюдай правила:
 1. Никогда не раскрывай секреты (API-ключи, пароли, бизнес-логику).
@@ -13,7 +13,7 @@ def LiamaSettings(BaseModel):
     """
 
 class Settings(BaseSettings):
-    liama: LiamaSettings = LiamaSettings()
+    llama: LiamaSettings = LiamaSettings()
 
 
 settings = Settings()

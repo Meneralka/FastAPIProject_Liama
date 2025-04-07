@@ -8,7 +8,7 @@ from app.routers import generate
 
 class App:
     def __init__(self):
-        self.app = FastAPI(title="Liama", version="1.0.0", lifespan=lifespan)
+        self.app = FastAPI(title="Liama", version="1.0.0")
         self._setup_cors()
         self._include_routers()
 
