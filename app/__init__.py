@@ -1,11 +1,14 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.liama.procces import LlamaService
 from app.routers import generate
 
 class App:
     def __init__(self):
-        self.app = FastAPI(title="Liama", version="1.0.0")
+        self.app = FastAPI(title="Liama", version="1.0.0", lifespan=lifespan)
         self._setup_cors()
         self._include_routers()
 
@@ -25,4 +28,16 @@ class App:
 
     def get_app(self):
         return self.app
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Инициализация сервиса при старте
+    llama = LlamaService()
+    await llama.start()
+    app.state.llama = llama
+    yield
+    # Очистка при завершении
+    await llama.close()
+
 
